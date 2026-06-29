@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import static java.time.LocalDateTime.now;
+
 @Service
 public class WarningsService {
 
@@ -30,7 +32,7 @@ public class WarningsService {
 
         return warningsEntities.stream()
                 .map(e -> {
-                    String message = "Notificação de " + e.getQuota().name() + " registrado para o bairro " + e.getNeighborhood().getName();
+                    String message = "Notificação de " + e.getQuota().getDescription() + " registrado para o bairro " + e.getNeighborhood().getName();
                     return new WarningResponse(
                             e.getId(),
                             message,
@@ -45,6 +47,7 @@ public class WarningsService {
         WarningsEntity entity = mapper.toEntity(request);
         NeighborhoodEntity neighborhood = neighborhoodRepository.getReferenceById(request.neighborhood());
         entity.setNeighborhood(neighborhood);
+        entity.setTimestamp(now());
 
         repository.save(entity);
     }

@@ -40,7 +40,8 @@ public class WarningsService {
                             e.getId(),
                             message,
                             e.getTimestamp(),
-                            e.getQuota().name()
+                            e.getQuota().name(),
+                            e.getNeighborhood().getPoint()
                     );
                 }).toList();
     }
@@ -56,7 +57,7 @@ public class WarningsService {
 
         String message = "Notificação de " + entity.getQuota().getDescription() + " registrado para o bairro " + entity.getNeighborhood().getName();
 
-        WarningResponse response = new WarningResponse(entity.getId(), message, entity.getTimestamp(), entity.getQuota().name());
+        WarningResponse response = new WarningResponse(entity.getId(), message, entity.getTimestamp(), entity.getQuota().name(), neighborhood.getPoint());
 
         fcmService.sendNotification(response, neighborhood);
     }

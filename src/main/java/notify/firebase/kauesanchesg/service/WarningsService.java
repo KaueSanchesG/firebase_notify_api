@@ -30,7 +30,7 @@ public class WarningsService {
     @Autowired
     private FcmService fcmService;
 
-    public List<WarningResponse> getAllWarnings(){
+    public List<WarningResponse> getAllWarnings() {
         List<WarningsEntity> warningsEntities = repository.findAll();
 
         return warningsEntities.stream()
@@ -41,13 +41,14 @@ public class WarningsService {
                             message,
                             e.getTimestamp(),
                             e.getQuota().name(),
-                            e.getNeighborhood().getPoint()
+                            e.getNeighborhood().getPoint().getY(),
+                            e.getNeighborhood().getPoint().getX()
                     );
                 }).toList();
     }
 
     @Transactional
-    public void createWarning(WarningRequest request){
+    public void createWarning(WarningRequest request) {
         WarningsEntity entity = mapper.toEntity(request);
         NeighborhoodEntity neighborhood = neighborhoodRepository.getReferenceById(request.neighborhood());
         entity.setNeighborhood(neighborhood);
@@ -57,7 +58,7 @@ public class WarningsService {
 
         String message = "Notificação de " + entity.getQuota().getDescription() + " registrado para o bairro " + entity.getNeighborhood().getName();
 
-        WarningResponse response = new WarningResponse(entity.getId(), message, entity.getTimestamp(), entity.getQuota().name(), neighborhood.getPoint());
+        WarningResponse response = new WarningResponse(entity.getId(), message, entity.getTimestamp(), entity.getQuota().name(), entity.getNeighborhood().getPoint().getX(), entity.getNeighborhood().getPoint().getY());
 
         fcmService.sendNotification(response, neighborhood);
     }

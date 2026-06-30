@@ -27,6 +27,9 @@ public class WarningsService {
     @Autowired
     private WarningMapper mapper;
 
+    @Autowired
+    private FcmService fcmService;
+
     public List<WarningResponse> getAllWarnings(){
         List<WarningsEntity> warningsEntities = repository.findAll();
 
@@ -50,5 +53,11 @@ public class WarningsService {
         entity.setTimestamp(now());
 
         repository.save(entity);
+
+        String message = "Notificação de " + entity.getQuota().getDescription() + " registrado para o bairro " + entity.getNeighborhood().getName();
+
+        WarningResponse response = new WarningResponse(entity.getId(), message, entity.getTimestamp(), entity.getQuota().name());
+
+        fcmService.sendNotification(response, neighborhood);
     }
 }

@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Firebase Credentials ###
+fcm-flood-monitoring-5a45f1d43d7b.json
+.env

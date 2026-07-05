@@ -1,4 +1,4 @@
-package notify.firebase.kauesanchesg.config;
+package br.com.kasag.oraklast.config;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;

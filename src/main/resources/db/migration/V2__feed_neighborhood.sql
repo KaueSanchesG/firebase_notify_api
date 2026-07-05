@@ -1,8 +1,0 @@
-INSERT INTO neighborhood (name, point)
-VALUES ('Centro', ST_GeomFromText('POINT(-54.58444732375795 -25.53141962961006)', 4326)),
-       ('Monjolo', ST_GeomFromText('POINT(-54.57859013732984 -25.50014516958931)', 4326)),
-       ('Itaipu B', ST_GeomFromText('POINT(-54.57800277948724 -25.49748865902249)', 4326)),
-       ('Vila A', ST_GeomFromText('POINT(-54.57825837826019 -25.49410554375783)', 4326)),
-       ('Lancaster', ST_GeomFromText('POINT(-54.57292643366676 -25.49851179616587)', 4326)),
-       ('Porto Belo', ST_GeomFromText('POINT(-54.57507678580623 -25.46646960506569)', 4326)),
-       ('Cidade Nova', ST_GeomFromText('POINT(-54.57448219724033 -25.46652344860388)', 4326));

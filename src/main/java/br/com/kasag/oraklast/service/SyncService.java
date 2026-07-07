@@ -56,12 +56,18 @@ public class SyncService {
             .map(p -> String.valueOf(p.longitude()))
             .collect(Collectors.joining(","));
 
-    public Map<String, Object> emitSyncEvent() {
+    public void emitSyncEvent() {
         List<OpenMeteoResponseDTO> meteoResponse = meteoService.doForecast(lats, lngs);
 
         Map<String, Object> payload = toHash(points, meteoResponse);
 
-        return payload;
+        try {
+            rtdbService.updateRTDB(payload);
+            fcmService.sendNotification(payload);
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new RuntimeException("Erro ao registrar evento\n");
+        }
     }
 
 }

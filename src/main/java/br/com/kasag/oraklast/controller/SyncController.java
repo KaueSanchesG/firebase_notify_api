@@ -17,7 +17,8 @@ public class SyncController {
     private SyncService service;
 
     @GetMapping("/sync")
-    public ResponseEntity<Map<String, Object>> updateFirebaseRTDB() {
-        return ResponseEntity.ok(service.emitSyncEvent());
+    public ResponseEntity<?> updateFirebaseRTDB() {
+        service.emitSyncEvent();
+        return ResponseEntity.ok("synched :D");
     }
 }

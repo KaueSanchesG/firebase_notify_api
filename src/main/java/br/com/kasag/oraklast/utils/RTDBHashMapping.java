@@ -41,12 +41,22 @@ public class RTDBHashMapping {
             Double discharge = discharges.get(dayIndex);
             Double median = dischargesMedian.get(dayIndex);
 
-            Double confiability = Math.floor((median / discharge * 100) * 100) / 100;
+            Double confiability = calcConfiability(median, discharge);
 
             RTDBDailyModelDTO dailyData = new RTDBDailyModelDTO(discharge, confiability);
 
             forecastMap.put(date, dailyData);
         }
         return forecastMap;
+    }
+
+    private static double calcConfiability(double discharge, double median){
+        if (discharge == 0.0 && median == 0.0) return 1000;
+        double minorValue = Math.min(discharge, median);
+        double greaterValue = Math.max(discharge, median);
+
+        double ratio = minorValue/greaterValue;
+
+        return Math.floor((ratio * 100) * 100) / 100;
     }
 }

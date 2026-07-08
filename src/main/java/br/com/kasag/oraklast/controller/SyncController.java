@@ -21,4 +21,13 @@ public class SyncController {
         service.emitSyncEvent();
         return ResponseEntity.ok("synched :D");
     }
+
+    /**
+     * Used 4 history data metrics only (and once while developing)
+     */
+//    @GetMapping("/history")
+//    public ResponseEntity<?> historyData(){
+//        service.calcHistMetrics();
+//        return ResponseEntity.ok("guess it works D:");
+//    }
 }

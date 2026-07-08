@@ -1,4 +1,4 @@
 package br.com.kasag.oraklast.dto;
 
-public record PointModelDTO(String id, Double latitude, Double longitude) {
+public record PointModelDTO(String id, Double latitude, Double longitude, Double historyMax, Double historyMin, Double historyAvg) {
 }

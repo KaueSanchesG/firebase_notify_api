@@ -1,5 +1,6 @@
 package br.com.kasag.oraklast.controller;
 
+import br.com.kasag.oraklast.dto.OpenMeteoResponseDTO;
 import br.com.kasag.oraklast.service.SyncService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -7,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -17,9 +19,8 @@ public class SyncController {
     private SyncService service;
 
     @GetMapping("/sync")
-    public ResponseEntity<?> updateFirebaseRTDB() {
-        service.emitSyncEvent();
-        return ResponseEntity.ok("synched :D");
+    public ResponseEntity<List<OpenMeteoResponseDTO>> updateFirebaseRTDB() {
+        return ResponseEntity.ok(service.emitSyncEvent());
     }
 
     /**

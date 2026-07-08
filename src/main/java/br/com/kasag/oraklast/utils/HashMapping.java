@@ -3,7 +3,7 @@ package br.com.kasag.oraklast.utils;
 import br.com.kasag.oraklast.dto.NotificationValidationDTO;
 import br.com.kasag.oraklast.dto.OpenMeteoResponseDTO;
 import br.com.kasag.oraklast.dto.PointModelDTO;
-import br.com.kasag.oraklast.dto.RTDBDailyModelDTO;
+import br.com.kasag.oraklast.dto.DailyModelDTO;
 import org.jspecify.annotations.NonNull;
 
 import java.util.HashMap;
@@ -12,7 +12,8 @@ import java.util.Map;
 
 import static br.com.kasag.oraklast.service.NotificationService.checkForOvercharge;
 
-public class RTDBHashMapping {
+public class HashMapping {
+
 
     public static Map<String, Object> toHash(List<PointModelDTO> points, List<OpenMeteoResponseDTO> meteoResponse){
         Map<String, Object> payload = new HashMap<>();
@@ -46,7 +47,7 @@ public class RTDBHashMapping {
                  */
                 if (trustability > 99.5) checkForOvercharge(new NotificationValidationDTO(point.id(), point.historyMax(), point.historyAvg(), discharge));
 
-                RTDBDailyModelDTO dailyData = new RTDBDailyModelDTO(discharge, trustability);
+                DailyModelDTO dailyData = new DailyModelDTO(discharge, trustability);
 
                 forecastMap.put(date, dailyData);
             }
@@ -72,7 +73,7 @@ public class RTDBHashMapping {
 
             Double confiability = calcConfiability(median, discharge);
 
-            RTDBDailyModelDTO dailyData = new RTDBDailyModelDTO(discharge, confiability);
+            DailyModelDTO dailyData = new DailyModelDTO(discharge, confiability);
 
             forecastMap.put(date, dailyData);
         }

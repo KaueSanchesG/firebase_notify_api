@@ -1,5 +1,6 @@
 package br.com.kasag.oraklast.service;
 
+import br.com.kasag.oraklast.dto.ForecastUnitedDataDTO;
 import br.com.kasag.oraklast.dto.OpenMeteoResponseDTO;
 import br.com.kasag.oraklast.dto.PointModelDTO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static br.com.kasag.oraklast.utils.RTDBHashMapping.toHash;
+import static br.com.kasag.oraklast.utils.HashMapping.toHash;
 
 @Service
 public class SyncService {
@@ -55,17 +56,17 @@ public class SyncService {
             .map(p -> String.valueOf(p.longitude()))
             .collect(Collectors.joining(","));
 
-    public void emitSyncEvent() {
+    public List<OpenMeteoResponseDTO> emitSyncEvent() {
         List<OpenMeteoResponseDTO> meteoResponse = meteoService.doForecast(lats, lngs);
+// TODO begin form here
+//        List<ForecastUnitedDataDTO> payload = meteoResponse.stream().map(
+//                openMeteoResponseDTO -> {
+//
+//                }
+//        ).collect(Collectors.toCollection());
 
-        Map<String, Object> payload = toHash(points, meteoResponse);
-
-        try {
-            rtdbService.updateRTDB(payload);
-        }catch (Exception e){
-            e.printStackTrace();
-            throw new RuntimeException("Erro ao registrar evento\n");
-        }
+        Map<String, Object> payloadDeprecated = toHash(points, meteoResponse);
+        return meteoResponse;
     }
 
     private void doSmth(){

@@ -1,4 +1,4 @@
-package br.com.kasag.oraklast;
+package br.com.kasag.oraklast.enums;
 
 public enum WarningType {
     t2,

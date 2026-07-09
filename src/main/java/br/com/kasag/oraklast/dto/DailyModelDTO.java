@@ -3,9 +3,9 @@ package br.com.kasag.oraklast.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public record DailyModelDTO(
-        String Data,
+        String date,
         @JsonProperty("river_discharge")
         Double riverDischarge,
-        Double confiability
+        Double trustability
 ) {
 }

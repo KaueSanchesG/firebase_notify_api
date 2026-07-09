@@ -1,22 +1,20 @@
 package br.com.kasag.oraklast.service;
 
-import br.com.kasag.oraklast.dto.ForecastUnitedDataDTO;
-import br.com.kasag.oraklast.dto.OpenMeteoResponseDTO;
-import br.com.kasag.oraklast.dto.PointModelDTO;
+import br.com.kasag.oraklast.dto.*;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
-
-import static br.com.kasag.oraklast.utils.HashMapping.toHash;
+import java.util.stream.IntStream;
 
 @Service
 public class SyncService {
 
     @Autowired
-    private RTDBService rtdbService;
+    private FirestoreService firestoreService;
 
     @Autowired
     private OpenMeteoService meteoService;
@@ -27,7 +25,7 @@ public class SyncService {
      * @content pN stands for Paraguay points
      * @content BN stands for Brasil points
      * @content aN stands for Argentina points
-     *
+     * <p>
      * hMax-hMin-hAvg values were obtained once with meteoService.calculateHistoryOfThecentury(lats, lngs) function,
      * some values must be wrong due to the geoPoint being too close to land or some point where the external API's
      * considers land
@@ -56,32 +54,66 @@ public class SyncService {
             .map(p -> String.valueOf(p.longitude()))
             .collect(Collectors.joining(","));
 
-    public List<OpenMeteoResponseDTO> emitSyncEvent() {
-        List<OpenMeteoResponseDTO> meteoResponse = meteoService.doForecast(lats, lngs);
-// TODO begin form here
-//        List<ForecastUnitedDataDTO> payload = meteoResponse.stream().map(
-//                openMeteoResponseDTO -> {
-//
-//                }
-//        ).collect(Collectors.toCollection());
+    public void emitSyncEvent() {
 
-        Map<String, Object> payloadDeprecated = toHash(points, meteoResponse);
-        return meteoResponse;
+        List<OpenMeteoResponseDTO> meteoResponse = meteoService.doForecast(lats, lngs);
+
+        List<List<DailyModelDTO>> dailyMapper = meteoResponse.stream()
+                .map(response -> {
+                    var daily = response.daily();
+                    return IntStream.range(0, daily.time().size())
+                            .mapToObj(i -> {
+                                String date = daily.time().get(i);
+                                Double discharge = daily.riverDischarge().get(i);
+                                Double trustability = calcTrustability(discharge, daily.riverDischargeMedian().get(i));
+
+                                return new DailyModelDTO(date, discharge, trustability);
+                            }).toList();
+                }).toList();
+
+        List<ForecastUnitedDataDTO> payload = getForecastUnitedDataDTOS(dailyMapper);
+
+        try{
+            firestoreService.update(payload);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
-    private void doSmth(){
-        List<OpenMeteoResponseDTO> meteoResponse = meteoService.doForecast(lats, lngs);
+    private @NonNull List<ForecastUnitedDataDTO> getForecastUnitedDataDTOS(List<List<DailyModelDTO>> dailyMapper) {
+        List<ForecastUnitedDataDTO> payload = new ArrayList<>();
+        for (int i = 0; i < points.size(); i++) {
+            ForecastUnitedDataDTO dto = new ForecastUnitedDataDTO(
+                    points.get(i).id(),
+                    points.get(i).latitude(),
+                    points.get(i).longitude(),
+                    new HistoryDataDTO(
+                            points.get(i).historyMax(),
+                            points.get(i).historyMin(),
+                            points.get(i).historyAvg()
+                    ),
+                    dailyMapper.get(i)
+                    );
+            payload.add(dto);
+        }
+        return payload;
+    }
 
-        Map<String, Object> payload = toHash(points, meteoResponse);
+    private double calcTrustability(double discharge, double median){
+        if (discharge == 0.0 && median == 0.0) return 100.0;
+        double minorValue = Math.min(discharge, median);
+        double greaterValue = Math.max(discharge, median);
 
+        double ratio = minorValue/greaterValue;
 
+        return Math.floor((ratio * 100) * 100) / 100;
     }
 
     /**
      * Used 4 history data metrics only (and once while developing)
      */
-    public void calcHistMetrics(){
-        meteoService.calculateHistoryOfThecentury(lats, lngs);
-    }
+//    public void calcHistMetrics() {
+//        meteoService.calculateHistoryOfThecentury(lats, lngs);
+//    }
 
 }

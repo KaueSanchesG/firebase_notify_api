@@ -17,6 +17,9 @@ public class SyncService {
     private FirestoreService firestoreService;
 
     @Autowired
+    private NotificationService notificationService;
+
+    @Autowired
     private OpenMeteoService meteoService;
 
     /**
@@ -74,7 +77,8 @@ public class SyncService {
         List<ForecastUnitedDataDTO> payload = getForecastUnitedDataDTOS(dailyMapper);
 
         try{
-            firestoreService.update(payload);
+            firestoreService.updatePoints(payload);
+            notificationService.doNotificationsRoutine(payload);
         }catch (Exception e){
             e.printStackTrace();
         }

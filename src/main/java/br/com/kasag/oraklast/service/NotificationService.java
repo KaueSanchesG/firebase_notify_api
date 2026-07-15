@@ -1,14 +1,19 @@
 package br.com.kasag.oraklast.service;
 
 import br.com.kasag.oraklast.dto.*;
+import br.com.kasag.oraklast.enums.WarningType;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+
+import static br.com.kasag.oraklast.enums.WarningType.getDesc;
 
 @Service
 public class NotificationService {
@@ -76,20 +81,33 @@ public class NotificationService {
             }
         }
 
+        final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
         try {
             firestoreService.updateNotifications(updatedNotificationList);
-            //TODO continuar aqui, realizar envio de notificação
-//            updatedNotificationList.stream().map(
-//                    notificationPayloadDTO -> {
-//                        String msg = notificationPayloadDTO.pointId() + " - ";
-//                        NotificationMessageDTO messageDTO = new NotificationMessageDTO(notificationPayloadDTO.pointId(), );
-//                        try {
-//                            fcmService.sendNotification(messageDTO);
-//                        } catch (FirebaseMessagingException e) {
-//                            throw new RuntimeException(e);
-//                        }
-//                    }
-//            );
+
+            updatedNotificationList.forEach(notificationPayloadDTO -> {
+
+                notificationPayloadDTO.notificationInfo().forEach(info -> {
+
+                    LocalDate date = LocalDate.parse(info.date());
+
+                    String msg = notificationPayloadDTO.pointId() + " - Leitura de " + getDesc(info.lvl()) +
+                            " para o dia " + date.format(formatter);
+
+                    NotificationMessageDTO messageDTO = new NotificationMessageDTO(
+                            notificationPayloadDTO.pointId(),
+                            notificationPayloadDTO.pointId(),
+                            msg
+                    );
+
+                    try {
+                        fcmService.sendNotification(messageDTO);
+                    } catch (FirebaseMessagingException e) {
+                        e.printStackTrace();
+                    }
+
+                });
+            });
         } catch (ExecutionException e) {
             throw new RuntimeException(e);
         } catch (InterruptedException e) {

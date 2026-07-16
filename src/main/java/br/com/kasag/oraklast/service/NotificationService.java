@@ -1,7 +1,6 @@
 package br.com.kasag.oraklast.service;
 
 import br.com.kasag.oraklast.dto.*;
-import br.com.kasag.oraklast.enums.WarningType;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -50,6 +49,10 @@ public class NotificationService {
                 String date = notificationDate.date();
                 int newLvl = notificationDate.lvl();
 
+                if (newLvl == 0) {
+                    continue;
+                }
+
                 int higherLvlIndex = -1;
 
                 for (Map<String, Object> cloudPointNotifications : syncedNotificationMap){
@@ -59,7 +62,7 @@ public class NotificationService {
                         if (infoList != null){
                             for (Map<String, Object> cloudPointNotification : infoList){
                                 if (date.equals(cloudPointNotification.get("date"))){
-                                    Long unparsedLvl = (Long) cloudPointNotification.get("notificationLvl");
+                                    Long unparsedLvl = (Long) cloudPointNotification.get("lvl");
                                     int lvl = (unparsedLvl != null ) ? unparsedLvl.intValue() : 0;
 
                                     if (lvl > higherLvlIndex){
@@ -125,7 +128,7 @@ public class NotificationService {
             List<NotificationDateDTO> dateDTOS = new ArrayList<>();
 
             for (DailyModelDTO dailyDTO : forecast.forecasts()) {
-                int valueOfRisk = checkForRisk(forecast.historyData().max(), forecast.historyData().min(), dailyDTO.riverDischarge());
+                int valueOfRisk = checkForRisk(forecast.historyData().max(), forecast.historyData().avg(), dailyDTO.riverDischarge());
                 NotificationDateDTO dateDTO = new NotificationDateDTO(dailyDTO.date(), valueOfRisk);
 
                 dateDTOS.add(dateDTO);
@@ -143,14 +146,20 @@ public class NotificationService {
         final double hmax50p = hMax * 0.5;
         final double hmax75p = hMax * 0.75;
 
-        if (discharge >= t2 && discharge < t3) {
-            return 1;
-        } else if (discharge >= t3) {
-            return 2;
-        } else if (hmax50p >= discharge && discharge < hmax75p) {
-            return 3;
-        } else {
+        if (discharge >= hmax75p) {
             return 4;
+        }
+        else if (discharge >= hmax50p) {
+            return 3;
+        }
+        else if (discharge >= t3) {
+            return 2;
+        }
+        else if (discharge >= t2) {
+            return 1;
+        }
+        else {
+            return 0;
         }
     }
 }

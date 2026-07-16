@@ -1,36 +1,165 @@
 package br.com.kasag.oraklast.service;
 
-import br.com.kasag.oraklast.dto.NotificationMessageDTO;
-import br.com.kasag.oraklast.dto.NotificationValidationDTO;
+import br.com.kasag.oraklast.dto.*;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+
+import static br.com.kasag.oraklast.enums.WarningType.getDesc;
 
 @Service
 public class NotificationService {
 
     @Autowired
-    private static FCMService fcmService;
+    private FCMService fcmService;
+
+    @Autowired
+    private FirestoreService firestoreService;
 
     /**
      * Method to validate how far for the point's max history value is the forecasted discharge
      */
+    public void doNotificationsRoutine(List<ForecastUnitedDataDTO> payload) {
+        List<NotificationPayloadDTO> parsedNotificationList = parseForecastsToNotification(payload);
+        List<Map<String, Object>> syncedNotificationMap = new ArrayList<>();
 
-    /**
-     * Quero ter aqui 2 tipos diferentes de mensagens:
-     *  1° por valor próximo a maxima histórica
-     *  2° por valor muito a cima do normal
-     */
-    public static void checkForOvercharge(NotificationValidationDTO dto){
+        List<NotificationPayloadDTO> updatedNotificationList = new ArrayList<>();
 
-        double percentageOfHistoryMax = dto.discharge()/dto.hMax();
+        try {
+            syncedNotificationMap = firestoreService.getRawNotifications();
+        }catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
 
-    };
+        for (NotificationPayloadDTO parsed : parsedNotificationList){
+            String pointId = parsed.pointId();
 
-    private static void checkTimesItsValue(NotificationValidationDTO dto) throws FirebaseMessagingException {
-        final double timesTwo = dto.hAvg()*2;
-        final double timesTree = dto.hAvg()*3;
+            List<NotificationDateDTO> notificationDatesToSend = new ArrayList<>();
 
-        if (dto.discharge() >= timesTwo && dto.discharge() < timesTree) fcmService.sendNotification(new NotificationMessageDTO(dto.pName() + "t2", "Dobro do volume", ""));
+            for (NotificationDateDTO notificationDate : parsed.notificationInfo()){
+                String date = notificationDate.date();
+                int newLvl = notificationDate.lvl();
+
+                if (newLvl == 0) {
+                    continue;
+                }
+
+                int higherLvlIndex = -1;
+
+                for (Map<String, Object> cloudPointNotifications : syncedNotificationMap){
+                    if (pointId.equals(cloudPointNotifications.get("pointId"))){
+                        List<Map<String, Object>> infoList = (List<Map<String, Object>>) cloudPointNotifications.get("notificationInfo");
+
+                        if (infoList != null){
+                            for (Map<String, Object> cloudPointNotification : infoList){
+                                if (date.equals(cloudPointNotification.get("date"))){
+                                    Long unparsedLvl = (Long) cloudPointNotification.get("lvl");
+                                    int lvl = (unparsedLvl != null ) ? unparsedLvl.intValue() : 0;
+
+                                    if (lvl > higherLvlIndex){
+                                        higherLvlIndex = lvl;
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
+                if (newLvl > higherLvlIndex){
+                    notificationDatesToSend.add(notificationDate);
+                }
+            }
+
+            if (!notificationDatesToSend.isEmpty()){
+                updatedNotificationList.add(new NotificationPayloadDTO(pointId, notificationDatesToSend));
+            }
+        }
+
+        final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+        try {
+            firestoreService.updateNotifications(updatedNotificationList);
+
+            updatedNotificationList.forEach(notificationPayloadDTO -> {
+
+                notificationPayloadDTO.notificationInfo().forEach(info -> {
+
+                    LocalDate date = LocalDate.parse(info.date());
+
+                    String msg = notificationPayloadDTO.pointId() + " - Leitura de " + getDesc(info.lvl()) +
+                            " para o dia " + date.format(formatter);
+
+                    NotificationMessageDTO messageDTO = new NotificationMessageDTO(
+                            notificationPayloadDTO.pointId(),
+                            notificationPayloadDTO.pointId(),
+                            msg
+                    );
+
+                    try {
+                        fcmService.sendNotification(messageDTO);
+                    } catch (FirebaseMessagingException e) {
+                        e.printStackTrace();
+                    }
+
+                });
+            });
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    private List<NotificationPayloadDTO> parseForecastsToNotification(List<ForecastUnitedDataDTO> payload) {
+        List<NotificationPayloadDTO> response = new ArrayList<>();
+
+        for (ForecastUnitedDataDTO forecast : payload) {
+            String pointId = forecast.pointId();
+
+            List<NotificationDateDTO> dateDTOS = new ArrayList<>();
+
+            for (DailyModelDTO dailyDTO : forecast.forecasts()) {
+                int valueOfRisk = checkForRisk(forecast.historyData().max(), forecast.historyData().avg(), dailyDTO.riverDischarge());
+                NotificationDateDTO dateDTO = new NotificationDateDTO(dailyDTO.date(), valueOfRisk);
+
+                dateDTOS.add(dateDTO);
+            }
+            NotificationPayloadDTO notificationDate = new NotificationPayloadDTO(pointId, dateDTOS);
+
+            response.add(notificationDate);
+        }
+        return response;
+    }
+
+    private int checkForRisk(Double hMax, Double hAvg, Double discharge) {
+        final double t2 = hAvg * 2;
+        final double t3 = hAvg * 3;
+        final double hmax50p = hMax * 0.5;
+        final double hmax75p = hMax * 0.75;
+
+        if (discharge >= hmax75p) {
+            return 4;
+        }
+        else if (discharge >= hmax50p) {
+            return 3;
+        }
+        else if (discharge >= t3) {
+            return 2;
+        }
+        else if (discharge >= t2) {
+            return 1;
+        }
+        else {
+            return 0;
+        }
     }
 }
